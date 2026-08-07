@@ -1,4 +1,30 @@
-# Splunk-Siem-Lab
+# Threat Detection Using Splunk
+### Fullstack Academy Cybersecurity Bootcamp — Capstone Project
+
+![Splunk](https://img.shields.io/badge/Splunk-9.4.3-orange)
+![Kali](https://img.shields.io/badge/Kali_Linux-2024-blue)
+![MITRE](https://img.shields.io/badge/MITRE_ATT%26CK-Mapped-red)
+![Status](https://img.shields.io/badge/Status-Complete-brightgreen)
+
+> A full adversarial kill chain simulation — from passive reconnaissance
+> through credential brute-force, RDP exploitation, and real-time SIEM
+> detection — built on Kali Linux + Windows Server 2022 with Splunk
+> Enterprise 9.4.3. Detection, alerting, and firewall containment
+> documented end to end.
+
+**Team:** The Spelunker-People
+**Date:** April 2026  |  **Bootcamp:** Fullstack Academy Cybersecurity
+
+
+
+
+
+
+
+
+--------
+
+Splunk-Siem-Lab
 Splunk SIEM Security Lab
 # 🔐 Splunk SIEM Security Lab
 
