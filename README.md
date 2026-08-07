@@ -13,7 +13,7 @@ The lab includes multiple stages of the attack lifecycle, including brute force 
 - Kali Linux
 - Windows Server 2022
 - Netdiscover
-- Namap
+- Nmap
 - Hydra
 - xfreerdp
 - Windows Firewall
