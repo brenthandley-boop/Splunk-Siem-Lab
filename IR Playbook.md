@@ -87,7 +87,7 @@ On the victim Windows host:
 3. Rule Type: `Custom`
 4. Program: `All programs`
 5. Protocol: `Any`
-6. Scope → Remote IP addresses: enter the attacker IP (e.g., `10.0.2.5`)
+6. Scope → Remote IP addresses: enter the attacker IP (e.g., `ATTACKER_IP`)
 7. Action: `Block the connection`
 8. Profile: Check `Domain`, `Private`, and `Public`
 9. Name: `BLOCK — Attacker [src_ip] — [Date]`
@@ -313,7 +313,7 @@ Status:             CONTAINED
 ════════════════════════════════════════════════════════════════
 
 A brute-force credential attack was detected against Windows Server 2022
-(10.0.2.15) originating from Kali Linux (10.0.2.5). The attack chain
+(VICTIM_IP) originating from Kali Linux (ATTACKER_IP). The attack chain
 included passive host discovery via ARP sweep, active port scanning
 confirming RDP on 3389/tcp, automated password guessing via Hydra (58
 failed EventCode 4625 entries), and a successful RDP authentication as
@@ -338,7 +338,7 @@ Detection Time:     April 13, 2026 — 12:38 PM EDT
 Time to Contain:    14 minutes from alert firing
 
 Key Indicators:
-  • Sudden spike in EventCode 4625 (Failed Logon) from 10.0.2.5
+  • Sudden spike in EventCode 4625 (Failed Logon) from ATTACKER_IP
   • 58 failed RDP attempts (Logon Type 10) in approximately 90 seconds
   • NTLM authentication package — consistent with automated tooling
   • Preceding nmap scan activity (EventCodes 5156/5157/5158)
@@ -348,12 +348,12 @@ Key Indicators:
 3. TIMELINE OF EVENTS
 ════════════════════════════════════════════════════════════════
 
-12:30 PM — Reconnaissance: netdiscover ARP sweep — host 10.0.2.15 discovered
+12:30 PM — Reconnaissance: netdiscover ARP sweep — host VICTIM_IP discovered
 12:32 PM — Scanning: nmap SYN scan — port 3389/tcp confirmed open (91 seconds)
 12:38 PM — Exploitation: Hydra brute force initiated — EventCode 4625 spike
 12:46 PM — Access: Successful RDP login — EventCode 4624, Logon Type 10
 12:50 PM — T1 Analyst: Alert investigated, attack confirmed, escalation assessed
-12:52 PM — Containment: Attacker IP 10.0.2.5 blocked via Windows Firewall rule
+12:52 PM — Containment: Attacker IP ATTACKER_IP blocked via Windows Firewall rule
 
 ════════════════════════════════════════════════════════════════
 4. INVESTIGATION SUMMARY
@@ -375,10 +375,10 @@ Evidence volume:    58 EventCode 4625 + 1 EventCode 4624 in Splunk index
 ════════════════════════════════════════════════════════════════
 
 Action:     Inbound block rule created in Windows Defender Firewall
-            with Advanced Security targeting remote IP 10.0.2.5.
+            with Advanced Security targeting remote IP ATTACKER_IP.
 
-Rule Name:  BLOCK — Attacker Kali Linux 10.0.2.5
-Scope:      Remote IP = 10.0.2.5
+Rule Name:  BLOCK — Attacker Kali Linux ATTACKER_IP
+Scope:      Remote IP = ATTACKER_IP
 Action:     Block the connection
 Applied to: Domain, Private, Public profiles
 
@@ -408,6 +408,6 @@ Next Steps: Monitor for re-attempt from new IPs. Validate recommendations
 
 ---
 
-*This playbook is maintained by Brent Handley*  
+*This playbook is maintained by The Spelunker-People SOC Team.*  
 *It should be reviewed and updated after any real or simulated incident.*  
 *Fullstack Academy Cybersecurity Bootcamp — April 2026*
