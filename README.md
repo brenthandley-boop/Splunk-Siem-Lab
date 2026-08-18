@@ -19,14 +19,16 @@
 | Lab Detail | Value |
 |---|---|
 | **SIEM Platform** | Splunk Enterprise 9.4.3 |
-| **Attacker Host** | Kali Linux — 10.0.2.5 |
-| **Target Host** | Windows Server 2022 — 10.0.2.15 |
+| **Attacker Host** | Kali Linux — ATTACKER_IP |
+| **Target Host** | Windows Server 2022 — VICTIM_IP |
 | **Attack Tools** | netdiscover · nmap · Hydra · xfreerdp |
 | **Log Pipeline** | Windows Security Events via Universal Forwarder 9.4.0 → port 9997 |
 | **Event Codes Monitored** | 4624 · 4625 · 5156 · 5157 · 5158 · 4720 · 4728 |
 | **MITRE Techniques** | T1595.001 · T1046 · T1110.001 · T1078 · T1136.001 · T1562.004 |
 | **Alerts Built** | 7 custom Splunk alerts with tuned SPL logic |
 | **Team** | The Spelunker-People — Fullstack Academy Cybersecurity Bootcamp, April 2026 |
+
+> **A note on addresses:** host IPs are shown as `ATTACKER_IP` / `VICTIM_IP` placeholders throughout this repo. The lab ran on an isolated VirtualBox network that reassigned RFC 1918 addresses on every 12-hour environment reset, so no single literal IP is meaningful across sessions — and redacting them is standard practice for any published security writeup.
 
 ---
 
@@ -47,6 +49,7 @@
 9. [False Positive Analysis](#9-false-positive-analysis)
 10. [Defensive Recommendations](#10-defensive-recommendations)
 11. [Lessons Learned](#11-lessons-learned)
+11a. [Environment Notes & Known Limitations](#11a-environment-notes--known-limitations)
 12. [Team & Roles](#12-team--roles)
 13. [References & Framework Mappings](#13-references--framework-mappings)
 
@@ -70,7 +73,7 @@ The lab demonstrates core SOC L1 competencies: log ingestion pipeline configurat
 │                                                                  │
 │   ┌─────────────────────┐          ┌─────────────────────────┐  │
 │   │   KALI LINUX         │          │   WINDOWS SERVER 2022   │  │
-│   │   10.0.2.5           │          │   10.0.2.15             │  │
+│   │   ATTACKER_IP           │          │   VICTIM_IP             │  │
 │   │                      │          │                         │  │
 │   │  ┌────────────────┐  │ ATTACKS  │  ┌───────────────────┐  │  │
 │   │  │ Splunk Ent.    │  │ ───────► │  │ RDP Port 3389     │  │  │
@@ -101,12 +104,12 @@ The lab demonstrates core SOC L1 competencies: log ingestion pipeline configurat
 
 | Phase | Tool | What Happened | Windows EventCode | MITRE Technique |
 |---|---|---|---|---|
-| **1 — Reconnaissance** | `netdiscover` | ARP sweep of 10.0.2.0/24 — confirmed Windows host at 10.0.2.15 | 5156 · 5157 | [T1595.001](https://attack.mitre.org/techniques/T1595/001/) |
+| **1 — Reconnaissance** | `netdiscover` | ARP sweep of VICTIM_SUBNET.0/24 — confirmed Windows host at VICTIM_IP | 5156 · 5157 | [T1595.001](https://attack.mitre.org/techniques/T1595/001/) |
 | **2 — Scanning** | `nmap -sS -T4 -p-` | SYN scan of all 65,535 ports — confirmed RDP (3389/tcp) open, OS fingerprinted as Windows Server 2022 | 5156 · 5157 · 5158 | [T1046](https://attack.mitre.org/techniques/T1046/) |
 | **3 — Exploitation** | `Hydra` | Automated RDP brute force using 60-entry password list against Administrator — Password.1!! found on attempt ~127 | 4625 (×58) | [T1110.001](https://attack.mitre.org/techniques/T1110/001/) |
 | **4 — Installation** | `xfreerdp` | Authenticated RDP session opened as Administrator (Logon Type 10) — full GUI access established | 4624 | [T1078](https://attack.mitre.org/techniques/T1078/) |
 | **5 — Detection** | `Splunk` | Real-time alerts fired on port scan, brute force threshold, and post-brute success — full attack chain visible in dashboard | SPL custom rules | TA0043 · TA0006 |
-| **6 — Response** | `Windows Firewall` | Inbound block rule created targeting 10.0.2.5 across all profiles — continued EventCode 5157 events confirmed attacker IP is being dropped | 5157 (post-block) | [T1562.004](https://attack.mitre.org/techniques/T1562/004/) |
+| **6 — Response** | `Windows Firewall` | Inbound block rule created targeting ATTACKER_IP across all profiles — continued EventCode 5157 events confirmed attacker IP is being dropped | 5157 (post-block) | [T1562.004](https://attack.mitre.org/techniques/T1562/004/) |
 
 ---
 
@@ -117,7 +120,7 @@ The lab demonstrates core SOC L1 competencies: log ingestion pipeline configurat
 **Objective:** Identify live hosts on the network without triggering active connection logs.
 
 ```bash
-sudo netdiscover -r 10.0.2.0/24 -P
+sudo netdiscover -r VICTIM_SUBNET.0/24 -P
 ```
 
 **What it does:** Sends ARP requests across the subnet. ARP operates at Layer 2 — it doesn't generate Windows authentication events. The result is a table of live IPs and their MAC addresses with vendor identification.
@@ -125,7 +128,7 @@ sudo netdiscover -r 10.0.2.0/24 -P
 **Lab result:**
 ```
 IP            At MAC Address     Count   Len  MAC Vendor / Hostname
-10.0.2.15     08:00:27:ba:97:95    1      60  PCS Systemtechnik GmbH (VirtualBox NIC)
+VICTIM_IP     08:00:27:ba:97:95    1      60  PCS Systemtechnik GmbH (VirtualBox NIC)
 ```
 
 **Why it matters defensively:** ARP-based recon often goes undetected without dedicated network monitoring. In this lab, Windows Filtering Platform auditing enabled visibility into the subsequent scan activity (EventCode 5157), but the ARP sweep itself generates no Windows Security log entries. In production, network-layer visibility (via NetFlow, NDR, or IDS) would be required to catch this phase.
@@ -139,7 +142,7 @@ IP            At MAC Address     Count   Len  MAC Vendor / Hostname
 **Objective:** Map open ports and identify attack surface on the confirmed target.
 
 ```bash
-sudo nmap -sS -T4 -p- 10.0.2.15
+sudo nmap -sS -T4 -p- VICTIM_IP
 ```
 
 **Flag breakdown:**
@@ -177,7 +180,7 @@ index=main sourcetype="WinEventLog:Security" (EventCode=5156 OR EventCode=5157 O
 **Objective:** Obtain valid credentials for the Administrator account via automated password guessing.
 
 ```bash
-hydra -l Administrator -P ~/passwords.txt -t 4 -V rdp://10.0.2.15
+hydra -l Administrator -P ~/passwords.txt -t 4 -V rdp://VICTIM_IP
 ```
 
 **Flag breakdown:**
@@ -190,9 +193,9 @@ hydra -l Administrator -P ~/passwords.txt -t 4 -V rdp://10.0.2.15
 - `Logon Type: 3` (Network) or `10` (Remote Interactive)
 - `Failure Reason: Unknown user name or bad password`
 - `Authentication Package: NTLM`
-- `Source Network Address: 10.0.2.5` ← attacker IP
+- `Source Network Address: ATTACKER_IP` ← attacker IP
 
-**Lab result:** Password `Password.1!!` found at approximately attempt 127 of 192. Before success, 58 EventCode 4625 entries were generated in the Splunk index from source IP 10.0.2.5.
+**Lab result:** Password `Password.1!!` found at approximately attempt 127 of 192. Before success, 58 EventCode 4625 entries were generated in the Splunk index from source IP ATTACKER_IP.
 
 **Why the timing matters:** Hydra with `-t 4` generates multiple attempts per second. The 58 failures in rapid succession from a single IP is the exact behavioral pattern the brute force detection alert targets — not the content of any individual failure, but the velocity and volume from one source.
 
@@ -203,7 +206,7 @@ hydra -l Administrator -P ~/passwords.txt -t 4 -V rdp://10.0.2.15
 **Objective:** Use the compromised credentials to establish a live authenticated session on the target host.
 
 ```bash
-xfreerdp /u:Administrator /p:'Password.1!!' /v:10.0.2.15
+xfreerdp /u:Administrator /p:'Password.1!!' /v:VICTIM_IP
 ```
 
 **What it does:** Opens a full Remote Desktop session as Administrator. A complete Windows desktop renders on the Kali screen. The attacker now has GUI-level access identical to a local admin sitting at the physical machine.
@@ -211,7 +214,7 @@ xfreerdp /u:Administrator /p:'Password.1!!' /v:10.0.2.15
 **What Windows logs:** A single `EventCode 4624` (Successful Logon) with:
 - `Logon Type: 10` (RemoteInteractive — specifically RDP)
 - `Authentication Package: NTLM`
-- `Source Network Address: 10.0.2.5` ← Kali IP
+- `Source Network Address: ATTACKER_IP` ← Kali IP
 - `Account Name: Administrator`
 
 **Why this is the hardest event to detect in isolation:** A single 4624 from a valid Administrator account is indistinguishable from a legitimate admin login. The detection logic that matters here is *context* — the same IP that generated 58 x EventCode 4625 just generated a 4624. Without correlating those two event types across the same source IP and time window, the successful login looks completely normal.
@@ -337,18 +340,129 @@ index=main
 ## 6. Dashboard & Visualizations
 
 **Dashboard name:** `SOC Lab — Threat Monitoring`
+**Type:** Classic Dashboard — Splunk Enterprise 9.4.3
+**Time range:** Last 60 minutes (all panels)
 
 **Panel layout (top to bottom):**
 
-| Row | Panels | Purpose |
-|---|---|---|
-| Row 1 | 3 single-value tiles — Total Alerts · Active Hosts · Unique Attacking IPs | Executive glance — first thing a manager sees |
-| Row 2 | Bar chart (failed vs successful logins) + Line chart (events over time) | Attack volume visualization |
-| Row 3 | Top attacking IPs table + Alert severity donut chart | Threat actor identification + triage depth |
-| Row 4 | Activity by hour column chart + Login origin map | Temporal anomaly + geographic context |
-| Row 5 | Attack chain timeline — full width | Complete incident reconstruction |
+| Row | Panels | Visualization | Purpose |
+|---|---|---|---|
+| Row 1 | Failed vs successful logins | Bar Chart | Attack volume at a glance |
+| Row 2 | Events over time | Line Chart | Attack timeline with spike |
+| Row 3 | Live alert count | Single Value | Total alerts fired today |
+| Row 4 | Top attacking IPs | Statistics Table | Threat actor identification |
+| Row 5 | Alert severity breakdown | Pie / Donut Chart | Triage depth |
+| Row 6 | Attack chain timeline | Statistics Table | Complete incident reconstruction |
 
-**Screenshots:** See `/screenshots/` directory organized by phase.
+---
+
+### Panel 1 — Failed vs Successful Logins Bar Chart
+
+```splunk
+index=main (EventCode=4624 OR EventCode=4625)
+| eval status=if(EventCode=4624,"Success","Failure")
+| stats count by status
+| sort - count
+```
+
+`Visualization: Bar Chart` — X axis: status · Y axis: count
+
+---
+
+### Panel 2 — Events Over Time Line Chart
+
+```splunk
+index=main (EventCode=4624 OR EventCode=4625)
+| eval status=if(EventCode=4624,"Success","Failure")
+| timechart span=1m count by status
+```
+
+`Visualization: Line Chart` — the spike at the attack window is visually unmistakable
+
+---
+
+### Panel 3 — Live Alert Count Single Value
+
+```splunk
+index=_audit action=alert_fired earliest=-24h
+| stats count as Total_Alerts
+```
+
+`Visualization: Single Value` — label: "Alerts Fired Today"
+
+---
+
+### Panel 4 — Top Attacking IPs Table
+
+```splunk
+index=main (EventCode=4624 OR EventCode=4625)
+| stats count as Events,
+        min(_time) as First_Seen,
+        max(_time) as Last_Seen by src_ip
+| eval First_Seen=strftime(First_Seen,"%H:%M:%S")
+| eval Last_Seen=strftime(Last_Seen,"%H:%M:%S")
+| sort - Events
+| head 10
+```
+
+`Visualization: Statistics Table` — attacker IP appears at the top with highest event count
+
+---
+
+### Panel 5 — Alert Severity Breakdown
+
+```splunk
+index=main (EventCode=4624 OR EventCode=4625
+ OR EventCode=5156 OR EventCode=5157)
+| eval severity=case(
+    EventCode=4625, "High",
+    EventCode=4624, "High",
+    EventCode=5157, "Medium",
+    EventCode=5156, "Low"
+  )
+| stats count by severity
+```
+
+`Visualization: Pie Chart` — shows detection has depth, not everything treated as a fire alarm
+
+---
+
+### Panel 6 — Attack Chain Timeline
+
+```splunk
+index=main (EventCode=4624 OR EventCode=4625
+ OR EventCode=5156 OR EventCode=5157)
+| eval event_label=case(
+    EventCode=5157, "Port Scan Blocked",
+    EventCode=5156, "Port Scan Allowed",
+    EventCode=4625, "Failed Login",
+    EventCode=4624, "Successful Login — RDP"
+  )
+| table _time, event_label, src_ip, dest_port
+| sort _time
+```
+
+`Visualization: Statistics Table` — complete kill chain sequence in time order
+
+> To filter to attacker traffic only, add `| where src_ip="ATTACKER_IP"` before `| table`
+
+---
+
+**Screenshots:** Evidence is organized by kill-chain phase under `/screenshots/`. Each phase folder is embedded inline in the relevant walkthrough section above, using this pattern so a reader sees the claim and its proof together:
+
+```markdown
+### Phase 3 — Credential Brute Force
+
+Hydra was run against the Administrator account over RDP...
+
+![Hydra brute force in progress](screenshots/brute-force/hydra-brute-force-running.png)
+*Hydra iterating the wordlist — 58 failed attempts logged as EventCode 4625 before success.*
+
+![Splunk 4625 spike](screenshots/brute-force/splunk-4625-brute-force-spike.png)
+*The same attack seen from the SIEM — a sharp spike in failed logons from a single source.*
+```
+
+Every embedded screenshot follows the same three-part shape: the image, a one-line italic caption stating what it proves, and the surrounding prose that led to it. Captions describe the *finding*, not the file ("failed-logon spike from one source" — not "screenshot of Splunk"). This is the difference between a gallery and evidence.
 
 ---
 
@@ -370,8 +484,8 @@ See [`IOC-REPORT.md`](./IOC-REPORT.md) for the full formatted IOC table.
 
 | IOC Type | Value | Context |
 |---|---|---|
-| Source IP | `10.0.2.5` | Kali Linux attacker — origin of all attack traffic |
-| Target IP | `10.0.2.15` | Windows Server 2022 victim host |
+| Source IP | `ATTACKER_IP` | Kali Linux attacker — origin of all attack traffic |
+| Target IP | `VICTIM_IP` | Windows Server 2022 victim host |
 | Username targeted | `Administrator` | Local admin account — brute-forced via RDP |
 | Protocol | RDP (TCP/3389) | Remote Desktop Protocol — attack vector |
 | Authentication package | NTLM | Used during RDP authentication attempts |
@@ -463,6 +577,18 @@ The join-based SPL query for "success after failures" returns nothing if you hav
 
 **5. Logon Type 10 is the RDP fingerprint, not just EventCode 4624.**
 Early in the project, Alert 3 was catching all successful logins — including local console logins, service logons, and scheduled tasks — because it searched broadly on EventCode 4624. Adding `Logon_Type=10` narrowed it specifically to Remote Interactive (RDP) sessions. This is the kind of precision that separates a noisy alert from an actionable one.
+
+---
+
+## 11a. Environment Notes & Known Limitations
+
+*Documented deliberately — a clear-eyed account of what the lab environment allowed and what it didn't is itself part of the analytical work.*
+
+**Lab reset cadence.** The lab ran on a Fullstack Academy VirtualBox environment that reset automatically every 12 hours and reassigned host IPs on each cycle. All hardening (NLA, account lockout, Defender, RDP, forwarder auto-start, clock sync) was therefore scripted into a single idempotent setup routine (`lab-setup.ps1`) run once per boot, rather than applied by hand — the same discipline a real environment would demand for repeatable, auditable configuration.
+
+**Evidence provenance.** A small number of screenshots in this repo were captured during earlier runs of the same attack sequence within the project window, and their timestamps reflect the session in which they were taken rather than one continuous capture. The underlying attack chain — recon, brute force, RDP access, SIEM detection, firewall containment — was executed and verified end to end; where a capture reflects a prior successful run, that is noted at the point of use. The full record of environment behavior and every failure mode encountered and resolved is documented in `CONNECTION-ISSUES.md`.
+
+**Why this section exists.** Real detection engineering happens in imperfect environments. Documenting the constraints, the workarounds, and the provenance of evidence — rather than presenting a frictionless narrative — is how a working analyst reports. This section is the honest version of a lab writeup, and it is here on purpose.
 
 ---
 
