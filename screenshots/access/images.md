@@ -1,5 +1,6 @@
 
 <img width="1617" height="475" alt="05-successful-xfreerdp-login" src="https://github.com/user-attachments/assets/c0d20953-70ba-480d-8819-2ece89ae76f6" />
+<img width="2526" height="1291" alt="Screenshot 2026-08-14 182231-- B4   B5" src="https://github.com/user-attachments/assets/8acecca2-bd09-42a1-b249-164453ac8ed2" />
 
 
 <img width="2525" height="1289" alt="Screenshot 2026-08-14 182352-- B6" src="https://github.com/user-attachments/assets/6506e53a-b49b-414c-975d-3f7181298584" />
