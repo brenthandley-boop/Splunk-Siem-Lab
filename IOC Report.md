@@ -17,8 +17,8 @@
 
 | IOC Type | Value | Description | Confidence |
 |---|---|---|---|
-| IPv4 Address — Attacker | `10.0.2.5` | Kali Linux attacker machine — source of all attack traffic | High |
-| IPv4 Address — Victim | `10.0.2.15` | Windows Server 2022 victim host — all attack traffic destined here | High |
+| IPv4 Address — Attacker | `ATTACKER_IP` | Kali Linux attacker machine — source of all attack traffic | High |
+| IPv4 Address — Victim | `VICTIM_IP` | Windows Server 2022 victim host — all attack traffic destined here | High |
 | Destination Port | `3389/tcp` | RDP — the targeted service for brute force and access | High |
 | Protocol | RDP (Remote Desktop Protocol) | Layer 7 protocol used for authentication attempts and access | High |
 | Authentication Package | `NTLM` | Used during all RDP authentication attempts — visible in EventCode 4625 `AuthenticationPackageName` field | High |
@@ -26,7 +26,7 @@
 
 ---
 
-## Host Indicators — Windows Server 2022 (10.0.2.15)
+## Host Indicators — Windows Server 2022 (VICTIM_IP)
 
 | IOC Type | Value | Description | Confidence |
 |---|---|---|---|
@@ -71,12 +71,12 @@ Use this query to hunt for these IOCs across any Splunk environment:
 
 ```splunk
 index=main
-  (src_ip="10.0.2.5"
+  (src_ip="ATTACKER_IP"
    OR (EventCode=4625 AND Logon_Type=10)
    OR (EventCode=4624 AND Logon_Type=10 AND AuthenticationPackageName=NTLM)
-   OR (EventCode=5157 AND src_ip="10.0.2.5"))
+   OR (EventCode=5157 AND src_ip="ATTACKER_IP"))
 | eval ioc_match=case(
-    src_ip="10.0.2.5", "Known Attacker IP",
+    src_ip="ATTACKER_IP", "Known Attacker IP",
     EventCode=4625 AND Logon_Type=10, "RDP Brute Force Attempt",
     EventCode=4624 AND Logon_Type=10, "RDP Successful Login",
     EventCode=5157, "Firewall Block — Port Scan"
@@ -105,7 +105,7 @@ index=main
 
 | IOC | Action Taken | Status |
 |---|---|---|
-| `10.0.2.5` | Blocked via Windows Defender Firewall inbound rule | Contained |
+| `ATTACKER_IP` | Blocked via Windows Defender Firewall inbound rule | Contained |
 | Administrator account | Password reset recommended | Pending |
 | NTLM authentication | Disable policy recommended | Pending |
 | RDP exposure | Restrict to authorized IPs recommended | Pending |
