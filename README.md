@@ -478,7 +478,7 @@ The playbook is authored in two formats:
 
 ## 8. Indicators of Compromise (IOCs)
 
-See [`IOC-REPORT.md`](./IOC-REPORT.md) for the full formatted IOC table.
+See [`IOC-REPORT.md`](./splunk/IOC-REPORT.md) for the full formatted IOC table.
 
 **Summary table:**
 
